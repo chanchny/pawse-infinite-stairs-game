@@ -25,6 +25,7 @@ p.note{font-size:13px;line-height:1.6;margin:0;color:#cfc3ff}
 .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
 .row label{font-size:12px;display:flex;align-items:center;gap:6px}
 input[type=range]{width:110px}
+input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 #vp{width:100%;max-width:400px;aspect-ratio:1;overflow:auto;border:4px solid #000;background:#888}
 #edit{display:block;width:100%;touch-action:none;image-rendering:auto;background:conic-gradient(#ccc 25%,#fff 0 50%,#ccc 0 75%,#fff 0) 0 0/20px 20px}
@@ -127,7 +128,7 @@ body.titleBg::before{content:"";position:fixed;top:0;left:0;right:0;bottom:0;z-i
       <input id="nick" class="inp" maxlength="8" placeholder="닉네임 (2~8글자)" autocomplete="username">
       <input id="pw" class="inp" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="비밀번호 (숫자 6자리)" autocomplete="current-password">
       <p class="note" id="loginMsg" style="color:#ff9a9a;min-height:1.2em"></p>
-      <div class="row"><button class="btn pink" id="btnLogin">로그인</button><button class="btn green" id="btnSignup">새로 만들기</button></div>
+      <div class="row"><button class="btn pink" id="btnLogin">로그인</button><button class="btn green" id="btnSignup">새로 만들기</button><button class="btn gray" id="btnBackLogin" style="display:none">← 로그인으로</button></div>
       <button class="btn small gray" id="btnGuest">게스트로 시작 (랭킹 기록 안 됨)</button>
       <p class="note" style="font-size:10px">⚠ 이메일 없이 만들기 때문에 비밀번호를 잊으면 복구할 수 없어요.</p>
     </div>
@@ -861,6 +862,7 @@ const LOOK_KEY='dogLook',NICK_RE=/^[0-9A-Za-z가-힣_]{2,8}$/;
 const hasDB=()=>!!(window.DB&&window.DB.enabled);
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+const lookKey=()=>(me&&!me.guest&&me.nick)?LOOK_KEY+':'+me.nick.toLowerCase():LOOK_KEY;
 function getLook(){return{b:curBreed,w:worn.map(w=>[w.id,w.dx,w.dy]),o:outfitId,h:handId,k:backId,c:bodyColor};}
 function applyLook(l){
   const br=BREEDS.find(x=>x.n===l.b)||BREEDS[0];br._c=br._c||breedFace(br);
@@ -886,25 +888,48 @@ async function derive(nick,pin){
   return Array.prototype.map.call(new Uint8Array(h),b=>b.toString(16).padStart(2,'0')).join('');
 }
 $('pw').addEventListener('input',()=>{$('pw').value=$('pw').value.replace(/\D/g,'').slice(0,6);});
+let signupMode=false;
+function setSignupMode(on){
+  signupMode=on;
+  $('btnLogin').style.display=on?'none':'';
+  $('btnBackLogin').style.display=on?'':'none';
+  $('btnSignup').textContent=on?'만들기':'새로 만들기';
+}
 async function doAuth(mode){
   const nick=$('nick').value.trim(),pw=$('pw').value,msg=t=>{$('loginMsg').textContent=t;};
+  if(!hasDB())return msg('랭킹 서버가 아직 연결되지 않았어요. 게스트로 시작해 주세요.');
+  if(mode==='signup'&&!signupMode){setSignupMode(true);return msg('사용할 닉네임과 비밀번호를 적고 "만들기"를 눌러 주세요.');}
   if(!NICK_RE.test(nick))return msg('닉네임은 2~8글자 (한글/영문/숫자/_ 만 가능)');
   if(!/^\d{6}$/.test(pw))return msg('비밀번호는 숫자 6자리예요.');
-  if(!hasDB())return msg('랭킹 서버가 아직 연결되지 않았어요. 게스트로 시작해 주세요.');
   msg('잠깐만요…');
-  try{await window.DB[mode](nick,await derive(nick,pw));msg('');}catch(e){msg(authMsg(e));}
+  try{
+    let exists=null;
+    try{exists=(await window.DB.byNick(nick)).length>0;}catch(e){}
+    if(mode==='login'&&exists===false)return msg('없는 닉네임이에요. "새로 만들기"로 회원가입해 주세요.');
+    if(mode==='signup'&&exists===true){setSignupMode(false);return msg('이미 있는 닉네임이에요. 로그인해 주세요.');}
+    await window.DB[mode](nick,await derive(nick,pw));msg('');
+  }catch(e){
+    if(mode==='signup'&&e&&e.code==='auth/email-already-in-use'){setSignupMode(false);return msg('이미 있는 닉네임이에요. 로그인해 주세요.');}
+    if(mode==='login'&&e&&(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/invalid-login-credentials'))return msg('비밀번호가 틀렸어요.');
+    msg(authMsg(e));
+  }
 }
-$('startBtn').onclick=()=>{$('loginMsg').textContent='';$('loginModal').classList.add('on');};
+$('startBtn').onclick=()=>{setSignupMode(false);$('loginMsg').textContent='';$('loginModal').classList.add('on');};
 $('loginClose').onclick=()=>$('loginModal').classList.remove('on');
 $('loginModal').addEventListener('pointerdown',e=>{if(e.target===$('loginModal'))$('loginModal').classList.remove('on');});
 $('btnLogin').onclick=()=>doAuth('login');
 $('btnSignup').onclick=()=>doAuth('signup');
+$('btnBackLogin').onclick=()=>{setSignupMode(false);$('loginMsg').textContent='';};
 $('pw').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth('login');});
 $('btnGuest').onclick=()=>{guest=true;me={guest:true,nick:'게스트'};enterStart();};
 function enterStart(){
   $('hello').textContent=me?me.nick+'님, 환영해요!':'';
-  let has=false;try{has=!!localStorage.getItem(LOOK_KEY);}catch(e){}
+  let has=false;try{has=!!localStorage.getItem(lookKey());}catch(e){}
   $('btnLast').style.display=has?'':'none';
+  if(!has&&me&&!me.guest&&hasDB()){
+    const who=me;
+    window.DB.getLook().then(l=>{if(l&&me===who){try{localStorage.setItem(lookKey(),l);}catch(e){}$('btnLast').style.display='';}}).catch(()=>{});
+  }
   $('btnRank').style.display=hasDB()?'':'none';
   show('scrStart');
 }
@@ -917,8 +942,12 @@ $('btnLogout').onclick=async()=>{
   if(hasDB()&&me&&!me.guest){try{await window.DB.logout();}catch(e){}}
   me=null;guest=false;$('pw').value='';show('scrLogin');
 };
-$('btnLast').onclick=()=>{try{applyLook(JSON.parse(localStorage.getItem(LOOK_KEY)));enterDress();}catch(e){}};
-$('btnPlay').addEventListener('click',()=>{try{localStorage.setItem(LOOK_KEY,JSON.stringify(getLook()));}catch(e){}});
+$('btnLast').onclick=()=>{try{applyLook(JSON.parse(localStorage.getItem(lookKey())));enterDress();}catch(e){}};
+$('btnPlay').addEventListener('click',()=>{
+  const l=getLook();
+  try{localStorage.setItem(lookKey(),JSON.stringify(l));}catch(e){}
+  if(me&&!me.guest&&hasDB())window.DB.saveLook(l).catch(()=>{});
+});
 
 async function submitScore(){
   const el=$('subMsg');el.textContent='';
@@ -1036,6 +1065,8 @@ try{
       const best=Math.max(old,score);
       return{updated,best,rank:await DB.rankOf(best)};
     },
+    async saveLook(look){const u=auth.currentUser;if(!u)return;await fs.updateDoc(fs.doc(db,'scores',u.uid),{look:JSON.stringify(look)});},
+    async getLook(){const u=auth.currentUser;if(!u)return null;const sn=await fs.getDoc(fs.doc(db,'scores',u.uid));return sn.exists()?sn.data().look||null:null;},
     async rankOf(score){const c=await fs.getCountFromServer(fs.query(col,fs.where('score','>',score)));return c.data().count+1;},
     top(cb){return fs.onSnapshot(fs.query(col,fs.orderBy('score','desc'),fs.limit(30)),sn=>cb(rows(sn)),()=>cb(null));},
     async search(q){const l=q.trim().toLowerCase();return rows(await fs.getDocs(fs.query(col,fs.where('nickLower','>=',l),fs.where('nickLower','<=',l+'\uf8ff'),fs.limit(10))));},
