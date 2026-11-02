@@ -80,8 +80,10 @@ body.titleBg::before{content:"";position:fixed;top:0;left:0;right:0;bottom:0;z-i
 #titlePanel::before{content:"";position:absolute;left:-2cqw;right:-2cqw;top:0;bottom:-2cqw;z-index:-1;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,.62) 0,rgba(0,0,0,.5) 55%,rgba(0,0,0,0) 100%);pointer-events:none}
 .hero{margin:0;width:100%;display:flex;flex-direction:column;align-items:center;font-family:'Press Start 2P',monospace;font-weight:normal;text-transform:uppercase;text-align:center}
 .hero .sub{font-size:3.6cqw;color:#fff;letter-spacing:.12em;text-shadow:2px 2px 0 #000;margin-bottom:4cqw}
-.hero .hl{display:block;white-space:nowrap;line-height:1.05;filter:drop-shadow(1px 1px 0 #000) drop-shadow(2px 2px 0 #000) drop-shadow(3px 3px 0 #000) drop-shadow(4px 4px 0 #000) drop-shadow(5px 5px 0 #000)}
-.hero .hl b{font-weight:normal;display:block;background:linear-gradient(180deg,#ffffff 0,#ffffff 48%,#ffe62e 52%,#ffe62e 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:0}
+.hero .hl{display:block;white-space:nowrap;line-height:1.05}
+.hero .hl b{font-weight:normal;display:block;-webkit-text-stroke:.9cqw currentColor;paint-order:stroke fill;letter-spacing:.02em}
+.hero .hl1 b{color:#fff}
+.hero .hl2 b{color:#ffe62e}
 .hero .hl1{font-size:12.5cqw}
 .hero .hl2{font-size:9.4cqw;margin-top:2.4cqw}
 .hero .kr{margin-top:5cqw;font-family:inherit;font-size:3.8cqw;color:#9fe8ff;text-shadow:2px 2px 0 #000;letter-spacing:.1em}
