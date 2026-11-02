@@ -971,7 +971,7 @@ async function submitScore(){
   try{
     const r=await window.DB.submit(G.score,G.idx,G.bones,getLook());
     el.textContent=r.updated?`🏆 신기록! 현재 ${r.rank}위`:`내 최고 ${r.best}점 · ${r.rank}위`;
-  }catch(e){el.textContent='랭킹 저장에 실패했어요 (네트워크 확인)';}
+  }catch(e){console.error('[랭킹 저장 실패]',e);el.textContent='랭킹 저장에 실패했어요 ('+(e.code||e.message)+')';}
 }
 $('btnOverRank').onclick=()=>{
   if(!hasDB()){$('subMsg').textContent='랭킹 서버가 아직 연결되지 않았어요 (게스트 모드)';return;}
@@ -993,8 +993,8 @@ async function openRank(){
   show('scrRank');$('rq').value='';$('rankMsg').textContent='불러오는 중…';$('myRank').textContent='';
   if(rankUnsub)rankUnsub();
   rankUnsub=window.DB.top((list)=>{
-    if(!list){$('rankMsg').textContent='랭킹을 불러오지 못했어요.';return;}
-    $('rankMsg').textContent='';rankData=list.filter(r=>r.score>0);
+    if(!list){$('rankMsg').textContent='랭킹을 불러오지 못했어요 ('+(window.DB.lastErr||'')+')';return;}
+    $('rankMsg').textContent='';rankData=list;
     if(!$('rq').value.trim())renderRank(rankData,true);
   });
   if(me&&!me.guest){
@@ -1009,7 +1009,7 @@ $('rq').oninput=()=>{
   rqTimer=setTimeout(async()=>{
     const q=$('rq').value.trim();
     if(!q){renderRank(rankData,true);return;}
-    try{renderRank(await window.DB.search(q),false);}catch(e){$('rankMsg').textContent='검색에 실패했어요.';}
+    try{renderRank(await window.DB.search(q),false);}catch(e){console.error('[검색 실패]',e);$('rankMsg').textContent='검색에 실패했어요 ('+(e.code||e.message)+')';}
   },250);
 };
 
@@ -1083,7 +1083,7 @@ try{
     async saveLook(look){const u=auth.currentUser;if(!u)return;await fs.updateDoc(fs.doc(db,'scores',u.uid),{look:JSON.stringify(look)});},
     async getLook(){const u=auth.currentUser;if(!u)return null;const sn=await fs.getDoc(fs.doc(db,'scores',u.uid));return sn.exists()?sn.data().look||null:null;},
     async rankOf(score){const c=await fs.getCountFromServer(fs.query(col,fs.where('score','>',score)));return c.data().count+1;},
-    top(cb){return fs.onSnapshot(fs.query(col,fs.orderBy('score','desc'),fs.limit(30)),sn=>cb(rows(sn)),()=>cb(null));},
+    top(cb){return fs.onSnapshot(fs.query(col,fs.orderBy('score','desc'),fs.limit(30)),sn=>cb(rows(sn)),er=>{console.error('[랭킹 읽기 실패]',er);DB.lastErr=er.code||er.message;cb(null);});},
     async search(q){const l=q.trim().toLowerCase();return rows(await fs.getDocs(fs.query(col,fs.where('nickLower','>=',l),fs.where('nickLower','<=',l+'\uf8ff'),fs.limit(10))));},
     async byNick(n){return rows(await fs.getDocs(fs.query(col,fs.where('nickLower','==',n.trim().toLowerCase()),fs.limit(1))));},
   };
