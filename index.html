@@ -926,9 +926,14 @@ function enterStart(){
   $('hello').textContent=me?me.nick+'님, 환영해요!':'';
   let has=false;try{has=!!localStorage.getItem(lookKey());}catch(e){}
   $('btnLast').style.display=has?'':'none';
-  if(!has&&me&&!me.guest&&hasDB()){
-    const who=me;
-    window.DB.getLook().then(l=>{if(l&&me===who){try{localStorage.setItem(lookKey(),l);}catch(e){}$('btnLast').style.display='';}}).catch(()=>{});
+  if(me&&!me.guest&&hasDB()){
+    // 항상 서버와 맞춰요: 서버에 있으면 서버 것이 우선, 서버에 없고 이 기기에만 있으면 서버로 올려요
+    const who=me,k=lookKey();
+    window.DB.getLook().then(l=>{
+      if(me!==who)return;
+      if(l){try{localStorage.setItem(k,l);}catch(e){}$('btnLast').style.display='';}
+      else{let loc=null;try{loc=localStorage.getItem(k);}catch(e){}if(loc)window.DB.saveLook(JSON.parse(loc)).catch(er=>console.warn('[코디 저장 실패]',er));}
+    }).catch(er=>console.warn('[코디 불러오기 실패]',er));
   }
   $('btnRank').style.display=hasDB()?'':'none';
   show('scrStart');
@@ -946,7 +951,7 @@ $('btnLast').onclick=()=>{try{applyLook(JSON.parse(localStorage.getItem(lookKey(
 $('btnPlay').addEventListener('click',()=>{
   const l=getLook();
   try{localStorage.setItem(lookKey(),JSON.stringify(l));}catch(e){}
-  if(me&&!me.guest&&hasDB())window.DB.saveLook(l).catch(()=>{});
+  if(me&&!me.guest&&hasDB())window.DB.saveLook(l).catch(er=>console.warn('[코디 저장 실패]',er));
 });
 
 async function submitScore(){
