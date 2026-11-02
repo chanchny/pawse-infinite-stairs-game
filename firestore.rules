@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 랭킹: 누구나 읽을 수 있고, 본인 기록만 쓸 수 있어요. 점수는 내려갈 수 없어요.
+    match /scores/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.nick is string
+        && request.resource.data.nick.size() >= 2 && request.resource.data.nick.size() <= 8
+        && request.resource.data.nickLower == request.resource.data.nick.lower()
+        && request.resource.data.score is int && request.resource.data.score == 0;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.nick == resource.data.nick
+        && request.resource.data.nickLower == resource.data.nickLower
+        && request.resource.data.score is int
+        && request.resource.data.score >= resource.data.score
+        && request.resource.data.score <= 100000;
+      allow delete: if false;
+    }
+  }
+}
