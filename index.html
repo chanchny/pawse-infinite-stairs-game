@@ -129,8 +129,9 @@ body.titleBg::before{content:"";position:fixed;top:0;left:0;right:0;bottom:0;z-i
       <input id="pw" class="inp" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="비밀번호 (숫자 6자리)" autocomplete="current-password">
       <p class="note" id="loginMsg" style="color:#ff9a9a;min-height:1.2em"></p>
       <div class="row"><button class="btn pink" id="btnLogin">로그인</button><button class="btn green" id="btnSignup">새로 만들기</button><button class="btn gray" id="btnBackLogin" style="display:none">← 로그인으로</button></div>
+      <button class="btn small blue" id="btnLoginRank">🏆 랭킹 보기 / 내 닉네임 찾기</button>
       <button class="btn small gray" id="btnGuest">게스트로 시작 (랭킹 기록 안 됨)</button>
-      <p class="note" style="font-size:10px">⚠ 이메일 없이 만들기 때문에 비밀번호를 잊으면 복구할 수 없어요.</p>
+      <p class="note" id="loginWarn" style="font-size:10px">⚠ 이메일 없이 만들기 때문에 비밀번호를 잊으면 복구할 수 없어요.</p>
     </div>
   </div>
 </section>
@@ -894,7 +895,16 @@ function setSignupMode(on){
   $('btnLogin').style.display=on?'none':'';
   $('btnBackLogin').style.display=on?'':'none';
   $('btnSignup').textContent=on?'만들기':'새로 만들기';
+  const w=$('loginWarn');
+  if(on){
+    w.innerHTML='⚠ <b>닉네임과 비밀번호를 꼭 메모해 두세요!</b><br>이메일 없이 만들어서 잊으면 복구할 수 없어요.<br>닉네임을 잊었다면 <b>🏆 랭킹 검색</b>에서 찾을 수 있어요.';
+    w.style.cssText='font-size:12px;color:#ffd23f;border:2px solid #ffd23f;padding:6px;line-height:1.5';
+  }else{
+    w.textContent='⚠ 이메일 없이 만들기 때문에 비밀번호를 잊으면 복구할 수 없어요.';
+    w.style.cssText='font-size:10px';
+  }
 }
+$('btnLoginRank').onclick=()=>{$('loginModal').classList.remove('on');openRank();};
 async function doAuth(mode){
   const nick=$('nick').value.trim(),pw=$('pw').value,msg=t=>{$('loginMsg').textContent=t;};
   if(!hasDB())return msg('랭킹 서버가 아직 연결되지 않았어요. 게스트로 시작해 주세요.');
@@ -914,7 +924,7 @@ async function doAuth(mode){
     msg(authMsg(e));
   }
 }
-$('startBtn').onclick=()=>{setSignupMode(false);$('loginMsg').textContent='';$('loginModal').classList.add('on');};
+$('startBtn').onclick=()=>{$('btnLoginRank').style.display=hasDB()?'':'none';setSignupMode(false);$('loginMsg').textContent='';$('loginModal').classList.add('on');};
 $('loginClose').onclick=()=>$('loginModal').classList.remove('on');
 $('loginModal').addEventListener('pointerdown',e=>{if(e.target===$('loginModal'))$('loginModal').classList.remove('on');});
 $('btnLogin').onclick=()=>doAuth('login');
@@ -993,7 +1003,7 @@ async function openRank(){
   }
 }
 $('btnRank').onclick=openRank;
-$('btnRankBack').onclick=()=>{if(rankUnsub){rankUnsub();rankUnsub=null;}me?enterStart():show('scrLogin');};
+$('btnRankBack').onclick=()=>{if(rankUnsub){rankUnsub();rankUnsub=null;}if(me){enterStart();}else{show('scrLogin');setSignupMode(false);$('loginMsg').textContent='';$('loginModal').classList.add('on');}};
 $('rq').oninput=()=>{
   clearTimeout(rqTimer);
   rqTimer=setTimeout(async()=>{
