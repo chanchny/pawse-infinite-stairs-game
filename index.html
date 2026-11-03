@@ -272,7 +272,7 @@ body.titleBg::before{content:"";position:fixed;top:0;left:0;right:0;bottom:0;z-i
       <div id="overRank"></div>
       <div class="sq">
         <button class="btn green" id="btnAgain"><i>🔁</i>다시하기</button>
-        <button class="btn pink" id="btnShare"><i>🖼</i>결과저장</button>
+        <button class="btn pink" id="btnShare"><i>📷</i>결과저장</button>
         <button class="btn blue" id="btnOverRank"><i>🏆</i>랭킹보기</button>
         <button class="btn gray" id="btnDressAgain"><i>👗</i>꾸미기</button>
       </div>
@@ -912,17 +912,30 @@ window.addEventListener('keydown',e=>{
 $('btnAgain').onclick=startGame;
 
 /* ===================== 결과 이미지 ===================== */
-$('btnShare').onclick=()=>{
-  const c=document.createElement('canvas');c.width=480;c.height=640;const x=c.getContext('2d');
+$('btnShare').onclick=async()=>{
+  /* 내 순위 카드 이미지: 몇위 / 캐릭터 / 닉네임 / 점수 */
+  let rank='',nick=(me&&me.nick)||'',score=G.score,look=JSON.stringify(getLook());
+  if(hasDB()&&me&&!me.guest){
+    try{
+      const r=(await window.DB.byNick(me.nick))[0];
+      if(r){score=r.score;if(r.look)look=r.look;rank=r.score>0?`${await window.DB.rankOf(r.score)}위`:'';}
+    }catch(e){}
+  }
+  const c=document.createElement('canvas');c.width=480;c.height=560;const x=c.getContext('2d');
   x.imageSmoothingEnabled=false;
-  BANDS.forEach((col,i)=>{x.fillStyle=col;x.fillRect(0,i*107,480,108);});
+  x.fillStyle='#1a1060';x.fillRect(0,0,480,560);
   x.textAlign='center';x.textBaseline='top';
   const T=(s,y,size,col)=>{x.font=`${size}px "Press Start 2P","Galmuri11",monospace`;x.fillStyle='#000';x.fillText(s,242,y+3);x.fillStyle=col;x.fillText(s,240,y);};
-  T('DOG STAIRS',36,28,'#ffd23f');
-  x.save();x.setTransform(9,0,0,9,0,0);drawChar(x,26.6,45,1,0,true);x.restore();
-  T(String(G.score),480,56,'#fff');
-  T(`STAIRS ${G.idx}  BONE ${G.bones}`,556,14,'#ffd23f');
-  x.font='16px "Galmuri11",sans-serif';x.fillStyle='#cfc3ff';x.fillText(MAG_NAME,240,606);
+  T('🏆 내 순위',24,22,'#fff');
+  if(rank)T(rank,70,34,'#ffd23f');
+  const cv=document.createElement('canvas');cv.width=336;cv.height=288;
+  drawLook(cv,look,6);
+  x.fillStyle='#1a1060';x.fillRect(72,130,336,288);
+  x.drawImage(cv,72,130);
+  x.strokeStyle='#000';x.lineWidth=4;x.strokeRect(72,130,336,288);
+  if(nick)T(nick,440,20,'#fff');
+  T(`${score}점`,486,18,'#7CFF8A');
+  x.font='12px "Galmuri11",sans-serif';x.fillStyle='#cfc3ff';x.fillText(MAG_NAME,240,536);
   c.toBlob(async b=>{
     const file=new File([b],'dog-stairs.png',{type:'image/png'});
     try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'무한의 멍계단'});return;}}catch(e){if(e&&e.name==='AbortError')return;}
@@ -1063,20 +1076,9 @@ async function submitScore(){
     renderOverRank(r);
   }catch(e){console.error('[랭킹 저장 실패]',e);el.textContent='랭킹 저장에 실패했어요 ('+(e.code||e.message)+')';}
 }
-$('btnOverRank').onclick=async()=>{
+$('btnOverRank').onclick=()=>{
   if(!hasDB()){$('subMsg').textContent='랭킹 서버가 아직 연결되지 않았어요 (게스트 모드)';return;}
-  if(!me||me.guest){openRank('game');return;}
-  show('scrMyRank');
-  $('mrNick').textContent=me.nick;$('mrRank').textContent='…';$('mrScore').textContent='';$('mrMsg').textContent='';
-  drawLook($('mrCv'),JSON.stringify(getLook()),6);
-  try{
-    const r=(await window.DB.byNick(me.nick))[0];
-    if(r){
-      if(r.look)drawLook($('mrCv'),r.look,6);
-      $('mrScore').textContent=`${r.score}점`;
-      $('mrRank').textContent=r.score>0?`${await window.DB.rankOf(r.score)}위`:'기록 없음';
-    }else $('mrRank').textContent='기록 없음';
-  }catch(e){$('mrRank').textContent='';$('mrMsg').textContent='순위를 불러오지 못했어요';}
+  openRank('game');
 };
 $('btnMrAll').onclick=()=>openRank('game');
 $('btnMrBack').onclick=()=>show('scrGame');
@@ -1115,7 +1117,7 @@ async function openRank(from){
   }
 }
 $('btnRank').onclick=()=>openRank();
-$('btnRankBack').onclick=()=>{if(rankUnsub){rankUnsub();rankUnsub=null;}if(rankFrom==='game'&&me&&!me.guest){show('scrMyRank');}else if(rankFrom==='game'){show('scrGame');}else if(me){enterStart();}else{show('scrLogin');}};
+$('btnRankBack').onclick=()=>{if(rankUnsub){rankUnsub();rankUnsub=null;}if(rankFrom==='game'){show('scrGame');}else if(me){enterStart();}else{show('scrLogin');}};
 $('rq').oninput=()=>{
   clearTimeout(rqTimer);
   rqTimer=setTimeout(async()=>{
