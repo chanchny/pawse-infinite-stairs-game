@@ -205,13 +205,12 @@ body.titleBg::before{content:"";position:fixed;top:0;left:0;right:0;bottom:0;z-i
 
 <!-- 랭킹 -->
 <section id="scrRank" class="screen">
-  <h2>🏆 실시간 랭킹</h2>
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;width:100%"><button class="btn small gray" id="btnRankBack">← 뒤로</button><h2 style="margin:0">🏆 실시간 랭킹</h2></div>
   <div class="list" id="myRow"></div>
   <p class="note" id="myRank"></p>
   <input id="rq" class="inp" type="search" placeholder="닉네임 검색" autocomplete="off">
   <p class="note" id="rankMsg"></p>
   <div class="list" id="rankList"></div>
-  <button class="btn small gray" id="btnRankBack">뒤로</button>
 </section>
 
 <!-- 내 순위 (게임오버 후) -->
