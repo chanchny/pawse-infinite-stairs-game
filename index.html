@@ -938,7 +938,7 @@ $('btnShare').onclick=async()=>{
   if(nick)T(nick,440,20,'#fff');
   T(`${score}점`,486,18,'#7CFF8A');
   const lg=document.querySelector('img.logo');
-  if(lg&&lg.naturalWidth){const h=36,w=h*lg.naturalWidth/lg.naturalHeight;x.drawImage(lg,240-w/2,514,w,h);}
+  if(lg&&lg.naturalWidth){const d=44,r=d/2,cx=240,cy=530,sc=1/0.95;x.save();x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.clip();x.drawImage(lg,cx-r*sc,cy-r*sc,d*sc,d*sc);x.restore();}
   c.toBlob(async b=>{
     const file=new File([b],'dog-stairs.png',{type:'image/png'});
     try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'무한의 멍계단'});return;}}catch(e){if(e&&e.name==='AbortError')return;}
