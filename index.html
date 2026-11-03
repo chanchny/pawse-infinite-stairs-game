@@ -65,6 +65,20 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 #over.on{display:flex}
 #over .big{font-family:'Press Start 2P',monospace;font-size:28px;color:var(--y);text-shadow:3px 3px 0 #000}
 #over .btn{width:200px;padding:7px 10px}
+#over{padding:14px 10px}
+#overRank{display:none;flex-direction:column;gap:4px;width:100%}
+#overRank.on{display:flex}
+#overRank .orow{display:flex;align-items:center;gap:6px;background:#2a1a80;border:3px solid #000;padding:3px 6px;font-size:11px;text-align:left;opacity:.9}
+#overRank .orow b{min-width:34px;color:var(--y)}
+#overRank .orow span{flex:1;word-break:break-all}
+#overRank .orow em{font-style:normal;color:var(--g)}
+#overRank .orow canvas{width:36px;height:31px;image-rendering:pixelated}
+#overRank .orow.me{background:#7a2a8a;border-color:#ffd23f;font-size:15px;padding:6px 8px;opacity:1}
+#overRank .orow.me canvas{width:64px;height:55px}
+#overRank .orow.me b{min-width:44px;font-size:17px}
+#over .sq{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%}
+#over .sq .btn{width:auto;aspect-ratio:1/1;padding:0;font-size:10px;line-height:1.3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-width:3px}
+#over .sq .btn i{font-style:normal;font-size:18px}
 #over{gap:6px}
 .ctrl{display:flex;gap:10px;width:100%}
 .ctrl .btn{flex:1;font-size:24px;padding:12px 0}
@@ -253,12 +267,15 @@ body.titleBg::before{content:"";position:fixed;top:0;left:0;right:0;bottom:0;z-i
     <canvas id="game" width="240" height="400"></canvas>
     <div id="over">
       <div class="big">GAME OVER</div>
-      <div id="overTxt" style="font-size:16px;line-height:1.8"></div>
-      <div id="subMsg" class="note" style="min-height:1.4em"></div>
-      <button class="btn green" id="btnAgain">다시 하기</button>
-      <button class="btn pink" id="btnShare">결과 이미지 저장</button>
-      <button class="btn blue" id="btnOverRank">🏆 랭킹 보기</button>
-      <button class="btn gray" id="btnDressAgain">꾸미기로</button>
+      <div id="overTxt" style="font-size:14px;line-height:1.6"></div>
+      <div id="subMsg" class="note" style="min-height:1.2em;font-size:11px"></div>
+      <div id="overRank"></div>
+      <div class="sq">
+        <button class="btn green" id="btnAgain"><i>🔁</i>다시하기</button>
+        <button class="btn pink" id="btnShare"><i>🖼</i>결과저장</button>
+        <button class="btn blue" id="btnOverRank"><i>🏆</i>랭킹보기</button>
+        <button class="btn gray" id="btnDressAgain"><i>👗</i>꾸미기</button>
+      </div>
     </div>
   </div>
   <div class="ctrl">
@@ -802,6 +819,7 @@ function gameOver(why){
   if(isBest){best=G.score;try{localStorage.setItem('dogStairsBest',best);}catch(e){}}
   setTimeout(()=>{
     $('overTxt').innerHTML=`${why==='time'?'시간 초과!':'발을 헛디뎠어요!'}<br>점수 <b style="color:#ffd23f">${G.score}</b> (계단 ${G.idx} · 뼈다귀 ${G.bones})<br>${isBest?'🎉 최고 기록!':'최고 기록 '+best}`;
+    $('overRank').classList.remove('on');$('overRank').innerHTML='';
     $('over').classList.add('on');
     submitScore();
   },600);
@@ -1018,13 +1036,31 @@ $('btnPlay').addEventListener('click',()=>{
   if(me&&!me.guest&&hasDB())window.DB.saveLook(l).catch(er=>console.warn('[코디 저장 실패]',er));
 });
 
+async function renderOverRank(r){
+  const box=$('overRank');
+  try{
+    const nb=await window.DB.neighbors(r.best);
+    box.innerHTML='';
+    const row=(rank,nick,score,look,me,k)=>{
+      const d=document.createElement('div');d.className='orow'+(me?' me':'');
+      d.innerHTML=`<b>${rank}위</b><canvas width="${me?112:56}" height="${me?96:48}"></canvas><span>${esc(nick)}${me?' (나)':''}</span><em>${score}점</em>`;
+      drawLook(d.querySelector('canvas'),look,k);box.appendChild(d);
+    };
+    if(nb.above)row(r.rank-1,nb.above.nick,nb.above.score,nb.above.look,false,1);
+    else{const c=document.createElement('div');c.className='note';c.style.fontSize='11px';c.textContent='👑 지금 1위예요!';box.appendChild(c);}
+    row(r.rank,me.nick,r.best,JSON.stringify(getLook()),true,2);
+    if(nb.below)row(r.rank+1,nb.below.nick,nb.below.score,nb.below.look,false,1);
+    box.classList.add('on');
+  }catch(e){console.warn('[주변 랭킹 실패]',e);}
+}
 async function submitScore(){
   const el=$('subMsg');el.textContent='';
   if(!me||me.guest||!hasDB())return;
   el.textContent='랭킹 저장 중…';
   try{
     const r=await window.DB.submit(G.score,G.idx,G.bones,getLook());
-    el.textContent=r.updated?`🏆 신기록! 현재 ${r.rank}위`:`내 최고 ${r.best}점 · ${r.rank}위`;
+    el.textContent=r.updated?'🏆 신기록!':`내 최고 ${r.best}점`;
+    renderOverRank(r);
   }catch(e){console.error('[랭킹 저장 실패]',e);el.textContent='랭킹 저장에 실패했어요 ('+(e.code||e.message)+')';}
 }
 $('btnOverRank').onclick=async()=>{
@@ -1158,6 +1194,11 @@ try{
     },
     async saveLook(look){const u=auth.currentUser;if(!u)return;await fs.updateDoc(fs.doc(db,'scores',u.uid),{look:JSON.stringify(look)});},
     async getLook(){const u=auth.currentUser;if(!u)return null;const sn=await fs.getDoc(fs.doc(db,'scores',u.uid));return sn.exists()?sn.data().look||null:null;},
+    async neighbors(score){
+      const up=rows(await fs.getDocs(fs.query(col,fs.where('score','>',score),fs.orderBy('score','asc'),fs.limit(1))));
+      const dn=rows(await fs.getDocs(fs.query(col,fs.where('score','<',score),fs.orderBy('score','desc'),fs.limit(1))));
+      return{above:up[0]||null,below:dn[0]||null};
+    },
     async rankOf(score){const c=await fs.getCountFromServer(fs.query(col,fs.where('score','>',score)));return c.data().count+1;},
     top(cb){return fs.onSnapshot(fs.query(col,fs.orderBy('score','desc'),fs.limit(30)),sn=>cb(rows(sn)),er=>{console.error('[랭킹 읽기 실패]',er);DB.lastErr=er.code||er.message;cb(null);});},
     async search(q){const l=q.trim().toLowerCase();return rows(await fs.getDocs(fs.query(col,fs.where('nickLower','>=',l),fs.where('nickLower','<=',l+'\uf8ff'),fs.limit(10))));},
